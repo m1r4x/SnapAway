@@ -224,7 +224,13 @@
   </style>
 </head>
 <body>
-
+<div id="log" style="position:fixed;bottom:0;left:0;right:0;background:rgba(0,0,0,0.8);color:lime;font-size:11px;padding:8px;z-index:9999;max-height:120px;overflow:auto;"></div>
+<script>
+  const log = document.getElementById('log');
+  window.onerror = (msg, src, line) => { log.innerHTML += `❌ ${msg} (${line})<br>`; };
+  const origLog = console.log;
+  console.log = (...args) => { log.innerHTML += args.join(' ') + '<br>'; origLog(...args); };
+</script>
 <!-- Flash effect -->
 <div id="flash"></div>
 
