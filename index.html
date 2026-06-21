@@ -286,6 +286,7 @@
   let stream = null;
   let facingMode = 'environment'; // rear camera default
   let currentBlob = null;
+  let currentFile = null; // File object built at capture time for instant share
 
   async function startCamera() {
     try {
@@ -332,6 +333,7 @@
 
     canvas.toBlob(blob => {
       currentBlob = blob;
+      currentFile = new File([blob], `snapaway-${Date.now()}.jpg`, { type: 'image/jpeg' });
       const url = URL.createObjectURL(blob);
       previewImg.src = url;
       showView('preview');
@@ -342,45 +344,42 @@
     if (previewImg.src) URL.revokeObjectURL(previewImg.src);
     previewImg.src = '';
     currentBlob = null;
+    currentFile = null;
     showView('camera');
   }
 
-  async function sharePhoto() {
-    if (!currentBlob) return;
+  function sharePhoto() {
+    if (!currentFile) return;
 
-    const filename = `snapaway-${Date.now()}.jpg`;
-    const file = new File([currentBlob], filename, { type: 'image/jpeg' });
+    // iOS requires navigator.share to be called synchronously within a user gesture.
+    // We pre-built currentFile at capture time so no async work is needed here.
+    if (navigator.share) {
+      const shareData = (navigator.canShare && navigator.canShare({ files: [currentFile] }))
+        ? { files: [currentFile], title: 'SnapAway' }
+        : { title: 'SnapAway', url: URL.createObjectURL(currentBlob) };
 
-    try {
-      // iOS Safari 15+ and Android Chrome support file sharing
-      if (navigator.share) {
-        const shareData = navigator.canShare && navigator.canShare({ files: [file] })
-          ? { files: [file], title: 'SnapAway' }
-          : { title: 'SnapAway', text: 'Foto scattata con SnapAway' };
-
-        await navigator.share(shareData);
-      } else {
-        // Desktop fallback: force download
-        const url = URL.createObjectURL(currentBlob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-      }
-    } catch (err) {
-      if (err.name !== 'AbortError') {
-        // Last resort: open image in new tab so user can long-press save
-        const url = URL.createObjectURL(currentBlob);
-        window.open(url, '_blank');
-        setTimeout(() => URL.revokeObjectURL(url), 5000);
-      }
+      navigator.share(shareData)
+        .catch(err => {
+          if (err.name !== 'AbortError') {
+            // Fallback: open in new tab for long-press save
+            const url = URL.createObjectURL(currentBlob);
+            window.open(url, '_blank');
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
+          }
+        })
+        .finally(() => discardPhoto());
+    } else {
+      // Desktop: force download
+      const url = URL.createObjectURL(currentBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = currentFile.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      discardPhoto();
     }
-
-    // Always discard after share attempt (even if user cancelled)
-    discardPhoto();
   }
 
   // Events
