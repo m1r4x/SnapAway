@@ -348,32 +348,34 @@
   async function sharePhoto() {
     if (!currentBlob) return;
 
-    const file = new File([currentBlob], `snapaway-${Date.now()}.jpg`, { type: 'image/jpeg' });
+    const filename = `snapaway-${Date.now()}.jpg`;
+    const file = new File([currentBlob], filename, { type: 'image/jpeg' });
 
     try {
-      // Native share sheet (iOS Safari, Android Chrome)
-      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: 'SnapAway'
-        });
-      } else if (navigator.share) {
-        // Fallback: share without files (older browsers)
-        const url = URL.createObjectURL(currentBlob);
-        await navigator.share({ url });
-        URL.revokeObjectURL(url);
+      // iOS Safari 15+ and Android Chrome support file sharing
+      if (navigator.share) {
+        const shareData = navigator.canShare && navigator.canShare({ files: [file] })
+          ? { files: [file], title: 'SnapAway' }
+          : { title: 'SnapAway', text: 'Foto scattata con SnapAway' };
+
+        await navigator.share(shareData);
       } else {
         // Desktop fallback: force download
         const url = URL.createObjectURL(currentBlob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = file.name;
+        a.download = filename;
+        document.body.appendChild(a);
         a.click();
-        URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
       }
     } catch (err) {
       if (err.name !== 'AbortError') {
-        console.error('Share error:', err);
+        // Last resort: open image in new tab so user can long-press save
+        const url = URL.createObjectURL(currentBlob);
+        window.open(url, '_blank');
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
       }
     }
 
