@@ -319,6 +319,8 @@
   }
 
   function capturePhoto() {
+      alert('w:' + video.videoWidth + ' h:' + video.videoHeight + ' ready:' + video.readyState);
+
     const w = video.videoWidth;
     const h = video.videoHeight;
     canvas.width = w;
