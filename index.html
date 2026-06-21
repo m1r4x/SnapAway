@@ -306,6 +306,8 @@
   }
 
   function showView(name) {
+    alert('showView: ' + name);
+
     cameraView.style.display  = name === 'camera'  ? 'flex'  : 'none';
     previewView.style.display = name === 'preview' ? 'flex'  : 'none';
     errorView.style.display   = name === 'error'   ? 'flex'  : 'none';
