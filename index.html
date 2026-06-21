@@ -224,13 +224,7 @@
   </style>
 </head>
 <body>
-<div id="log" style="position:fixed;bottom:0;left:0;right:0;background:rgba(0,0,0,0.8);color:lime;font-size:11px;padding:8px;z-index:9999;max-height:120px;overflow:auto;"></div>
-<script>
-  const log = document.getElementById('log');
-  window.onerror = (msg, src, line) => { log.innerHTML += `❌ ${msg} (${line})<br>`; };
-  const origLog = console.log;
-  console.log = (...args) => { log.innerHTML += args.join(' ') + '<br>'; origLog(...args); };
-</script>
+
 <!-- Flash effect -->
 <div id="flash"></div>
 
@@ -338,7 +332,6 @@
     triggerFlash();
 
     canvas.toBlob(blob => {
-      alert('foto catturata!');
       currentBlob = blob;
       currentFile = new File([blob], `snapaway-${Date.now()}.jpg`, { type: 'image/jpeg' });
       const url = URL.createObjectURL(blob);
@@ -354,10 +347,8 @@
     currentFile = null;
     showView('camera');
   }
+
   function sharePhoto() {
-  alert('share toccato - navigator.share esiste: ' + !!navigator.share);
-}
-  /* function sharePhoto() {
     if (!currentFile) return;
 
     // iOS requires navigator.share to be called synchronously within a user gesture.
@@ -389,7 +380,7 @@
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       discardPhoto();
     }
-  } */
+  }
 
   // Events
   shutterBtn.addEventListener('click', capturePhoto);
