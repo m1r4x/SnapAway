@@ -1,0 +1,23 @@
+{
+  "name": "SnapAway",
+  "short_name": "SnapAway",
+  "description": "Scatta, condividi, dimentica.",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "icons": [
+    {
+      "src": "https://via.placeholder.com/192x192/0a0a0a/e8ff47?text=S",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://via.placeholder.com/512x512/0a0a0a/e8ff47?text=S",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

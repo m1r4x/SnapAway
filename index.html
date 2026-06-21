@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen" />
+  <meta name="apple-mobile-web-app-title" content="SnapAway" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <link rel="manifest" href="manifest.json" />
+  <title>SnapAway</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0a;
+      --surface: #141414;
+      --border: #2a2a2a;
+      --text: #f0f0f0;
+      --muted: #666;
+      --accent: #e8ff47;
+      --danger: #ff4747;
+      --radius: 16px;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* ── CAMERA VIEW ── */
+    #camera-view {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: space-between;
+      padding: env(safe-area-inset-top, 20px) 0 env(safe-area-inset-bottom, 20px);
+    }
+
+    #video {
+      position: fixed; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      z-index: 0;
+    }
+
+    .cam-overlay {
+      position: relative; z-index: 1;
+      width: 100%;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 24px;
+    }
+
+    .app-title {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: #fff;
+      text-shadow: 0 1px 8px rgba(0,0,0,0.6);
+    }
+
+    .cam-hint {
+      font-size: 12px;
+      color: rgba(255,255,255,0.5);
+      text-align: center;
+      padding: 0 24px;
+      position: relative; z-index: 1;
+      text-shadow: 0 1px 6px rgba(0,0,0,0.8);
+    }
+
+    .cam-bottom {
+      position: relative; z-index: 1;
+      display: flex; align-items: center; justify-content: center;
+      gap: 48px;
+      padding-bottom: 12px;
+    }
+
+    /* Shutter */
+    #shutter-btn {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      background: #fff;
+      border: 4px solid rgba(255,255,255,0.3);
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.1s;
+      box-shadow: 0 0 0 6px rgba(255,255,255,0.15);
+      -webkit-tap-highlight-color: transparent;
+      position: relative;
+    }
+    #shutter-btn:active {
+      transform: scale(0.92);
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.1);
+    }
+
+    /* Flip camera */
+    #flip-btn {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: none;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.15s;
+    }
+    #flip-btn:active { background: rgba(255,255,255,0.3); }
+    #flip-btn svg { width: 22px; height: 22px; fill: #fff; }
+
+    .cam-spacer { width: 44px; }
+
+    /* Flash overlay */
+    #flash {
+      position: fixed; inset: 0; z-index: 99;
+      background: #fff;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.08s ease-out;
+    }
+    #flash.active { opacity: 1; }
+
+    /* ── PREVIEW VIEW ── */
+    #preview-view {
+      position: fixed; inset: 0;
+      display: none;
+      flex-direction: column;
+      background: var(--bg);
+    }
+
+    #preview-img {
+      flex: 1;
+      width: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .preview-bar {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 16px 24px;
+      padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .preview-label {
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .preview-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 15px;
+      border-radius: 12px;
+      border: none;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn:active { opacity: 0.8; transform: scale(0.97); }
+
+    .btn-share {
+      background: var(--accent);
+      color: #0a0a0a;
+    }
+
+    .btn-discard {
+      background: var(--border);
+      color: var(--text);
+    }
+
+    .warning-note {
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+    }
+    .warning-note span {
+      color: var(--danger);
+      font-weight: 600;
+    }
+
+    /* No camera error */
+    #error-view {
+      position: fixed; inset: 0;
+      display: none;
+      align-items: center; justify-content: center;
+      flex-direction: column; gap: 16px;
+      padding: 40px;
+      text-align: center;
+    }
+    #error-view .err-icon { font-size: 48px; }
+    #error-view p { color: var(--muted); font-size: 15px; line-height: 1.5; }
+    #retry-btn {
+      margin-top: 8px;
+      padding: 12px 28px;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #0a0a0a;
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Flash effect -->
+<div id="flash"></div>
+
+<!-- Camera View -->
+<div id="camera-view">
+  <video id="video" autoplay playsinline muted></video>
+  <div class="cam-overlay">
+    <span class="app-title">SnapAway</span>
+  </div>
+  <p class="cam-hint">La foto verrà eliminata dopo la condivisione</p>
+  <div class="cam-bottom">
+    <div class="cam-spacer"></div>
+    <button id="shutter-btn" aria-label="Scatta foto"></button>
+    <button id="flip-btn" aria-label="Cambia fotocamera">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20 7l-3-3-3 3h2.2A6 6 0 0 1 18 12h2a8 8 0 0 0-1.8-5H20zM4 17l3 3 3-3H8.8A6 6 0 0 1 6 12H4a8 8 0 0 0 1.8 5H4zM12 6a6 6 0 1 1 0 12A6 6 0 0 1 12 6z" opacity=".3"/>
+        <path d="M20 4l-3-3-3 3h2a8 8 0 0 1 2 5.4V12h2v-2.6A10 10 0 0 0 17 4h3zM7 12v.6A10 10 0 0 0 9.5 20H7l3 3 3-3h-2A8 8 0 0 1 9 12.6V12H7z"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<!-- Preview View -->
+<div id="preview-view">
+  <img id="preview-img" alt="Anteprima foto" />
+  <div class="preview-bar">
+    <p class="preview-label">Cosa vuoi fare con questa foto?</p>
+    <div class="preview-actions">
+      <button class="btn btn-discard" id="discard-btn">🗑 Elimina</button>
+      <button class="btn btn-share" id="share-btn">↑ Condividi</button>
+    </div>
+    <p class="warning-note">La foto viene eliminata <span>subito dopo</span> la condivisione</p>
+  </div>
+</div>
+
+<!-- Error View -->
+<div id="error-view">
+  <div class="err-icon">📵</div>
+  <p>Impossibile accedere alla fotocamera.<br>Controlla i permessi nelle impostazioni del browser.</p>
+  <button id="retry-btn">Riprova</button>
+</div>
+
+<canvas id="canvas" style="display:none"></canvas>
+
+<script>
+  const video       = document.getElementById('video');
+  const canvas      = document.getElementById('canvas');
+  const shutterBtn  = document.getElementById('shutter-btn');
+  const flipBtn     = document.getElementById('flip-btn');
+  const shareBtn    = document.getElementById('share-btn');
+  const discardBtn  = document.getElementById('discard-btn');
+  const previewImg  = document.getElementById('preview-img');
+  const flash       = document.getElementById('flash');
+  const cameraView  = document.getElementById('camera-view');
+  const previewView = document.getElementById('preview-view');
+  const errorView   = document.getElementById('error-view');
+  const retryBtn    = document.getElementById('retry-btn');
+
+  let stream = null;
+  let facingMode = 'environment'; // rear camera default
+  let currentBlob = null;
+
+  async function startCamera() {
+    try {
+      if (stream) { stream.getTracks().forEach(t => t.stop()); }
+
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
+        audio: false
+      });
+      video.srcObject = stream;
+      showView('camera');
+    } catch (err) {
+      console.error(err);
+      showView('error');
+    }
+  }
+
+  function showView(name) {
+    cameraView.style.display  = name === 'camera'  ? 'flex'  : 'none';
+    previewView.style.display = name === 'preview' ? 'flex'  : 'none';
+    errorView.style.display   = name === 'error'   ? 'flex'  : 'none';
+  }
+
+  function triggerFlash() {
+    flash.classList.add('active');
+    setTimeout(() => flash.classList.remove('active'), 150);
+  }
+
+  function capturePhoto() {
+    const w = video.videoWidth;
+    const h = video.videoHeight;
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+
+    // Mirror front camera
+    if (facingMode === 'user') {
+      ctx.translate(w, 0);
+      ctx.scale(-1, 1);
+    }
+    ctx.drawImage(video, 0, 0, w, h);
+
+    triggerFlash();
+
+    canvas.toBlob(blob => {
+      currentBlob = blob;
+      const url = URL.createObjectURL(blob);
+      previewImg.src = url;
+      showView('preview');
+    }, 'image/jpeg', 0.92);
+  }
+
+  function discardPhoto() {
+    if (previewImg.src) URL.revokeObjectURL(previewImg.src);
+    previewImg.src = '';
+    currentBlob = null;
+    showView('camera');
+  }
+
+  async function sharePhoto() {
+    if (!currentBlob) return;
+
+    const file = new File([currentBlob], `snapaway-${Date.now()}.jpg`, { type: 'image/jpeg' });
+
+    try {
+      // Native share sheet (iOS Safari, Android Chrome)
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'SnapAway'
+        });
+      } else if (navigator.share) {
+        // Fallback: share without files (older browsers)
+        const url = URL.createObjectURL(currentBlob);
+        await navigator.share({ url });
+        URL.revokeObjectURL(url);
+      } else {
+        // Desktop fallback: force download
+        const url = URL.createObjectURL(currentBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = file.name;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.error('Share error:', err);
+      }
+    }
+
+    // Always discard after share attempt (even if user cancelled)
+    discardPhoto();
+  }
+
+  // Events
+  shutterBtn.addEventListener('click', capturePhoto);
+  discardBtn.addEventListener('click', discardPhoto);
+  shareBtn.addEventListener('click', sharePhoto);
+
+  flipBtn.addEventListener('click', () => {
+    facingMode = facingMode === 'environment' ? 'user' : 'environment';
+    startCamera();
+  });
+
+  retryBtn.addEventListener('click', startCamera);
+
+  // Spacebar / volume button shutter (desktop)
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space' && cameraView.style.display !== 'none') {
+      e.preventDefault();
+      capturePhoto();
+    }
+  });
+
+  // Init
+  startCamera();
+</script>
+</body>
+</html>
