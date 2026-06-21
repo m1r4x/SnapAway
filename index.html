@@ -347,8 +347,10 @@
     currentFile = null;
     showView('camera');
   }
-
   function sharePhoto() {
+  alert('share toccato - navigator.share esiste: ' + !!navigator.share);
+}
+  /* function sharePhoto() {
     if (!currentFile) return;
 
     // iOS requires navigator.share to be called synchronously within a user gesture.
@@ -380,7 +382,7 @@
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       discardPhoto();
     }
-  }
+  } */
 
   // Events
   shutterBtn.addEventListener('click', capturePhoto);
