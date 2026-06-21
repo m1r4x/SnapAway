@@ -338,6 +338,7 @@
     triggerFlash();
 
     canvas.toBlob(blob => {
+      alert('foto catturata!');
       currentBlob = blob;
       currentFile = new File([blob], `snapaway-${Date.now()}.jpg`, { type: 'image/jpeg' });
       const url = URL.createObjectURL(blob);
